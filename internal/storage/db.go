@@ -29,5 +29,5 @@ func NewDB() (*sql.DB, error) {
 			return db, nil
 		}
 	}
-	return nil, fmt.Errorf("Не удалось подключиться к базе данных: %w", err)
+	return nil, fmt.Errorf("Не удалось подключиться к базе данных: %v", err)
 }
