@@ -79,3 +79,19 @@ func UpdateNote(db *sql.DB, id int, n *models.Note) error {
 	log.Printf("Успешно обновлена информация в заметке id=%d", id)
 	return nil
 }
+
+func DeleteNote(db *sql.DB, id int) error {
+	result, err := db.Exec("DELETE FROM notes WHERE id=$1", id)
+	if err != nil {
+		log.Printf("Ошибка при удалении заметки id=%d", id)
+		return err
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		log.Printf("Заметка с id=%d не найдена", id)
+		return sql.ErrNoRows
+	}
+	log.Printf("Успешно удалена заметка id=%d", id)
+	return nil
+}
