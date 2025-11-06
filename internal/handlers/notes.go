@@ -1,0 +1,79 @@
+package handlers
+
+import (
+	"database/sql"
+	"encoding/json"
+	"net/http"
+	"notes-api/internal/models"
+	"notes-api/internal/storage"
+	"strconv"
+	"strings"
+
+	"github.com/gorilla/mux"
+)
+
+type Handler struct {
+	DB *sql.DB
+}
+
+func (h *Handler) GetAllNotesHandler(w http.ResponseWriter, r *http.Request) {
+
+	notes, err := storage.GetAllNotes(h.DB)
+	if err != nil {
+		http.Error(w, "server error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(notes)
+}
+
+func (h *Handler) CreateNoteHandler(w http.ResponseWriter, r *http.Request) {
+
+	var payload models.Note
+
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "Неверный формат JSON", http.StatusBadRequest)
+		return
+	}
+
+	id, err := storage.CreateNote(h.DB, &payload)
+	if err != nil {
+		http.Error(w, "ошибка при создании заметки", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "Заметка успешно создана",
+		"id":      id,
+	})
+}
+
+func (h *Handler) GetNoteByIDHandler(w http.ResponseWriter, r *http.Request) {
+
+	vars := mux.Vars(r)
+	idStr, ok := vars["id"]
+	if !ok {
+		http.Error(w, "ID не указан", http.StatusBadRequest)
+		return
+	}
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Неверный формат ID", http.StatusBadRequest)
+		return
+	}
+
+	note, err := storage.GetNoteByID(h.DB, id)
+	if err != nil {
+		if strings.Contains(err.Error(), "не найдена") {
+			http.Error(w, "Запись не найдена", http.StatusNotFound)
+		} else {
+			http.Error(w, "Ошибка сервера", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(note)
+}
