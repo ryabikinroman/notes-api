@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"notes-api/internal/models"
 	"notes-api/internal/storage"
@@ -76,4 +77,67 @@ func (h *Handler) GetNoteByIDHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(note)
+}
+
+func (h *Handler) UpdateNoteHandler(w http.ResponseWriter, r *http.Request) {
+
+	vars := mux.Vars(r)
+	idStr, ok := vars["id"]
+	if !ok {
+		http.Error(w, "ID не указан", http.StatusBadRequest)
+		return
+	}
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Неверный формат ID", http.StatusBadRequest)
+		return
+	}
+
+	var payload models.Note
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "Неверный формат JSON", http.StatusBadRequest)
+		return
+	}
+
+	err = storage.UpdateNote(h.DB, id, &payload)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "Заметка не найдена", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Ошибка при обновлении заметки", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": fmt.Sprintf("Заметка с ID=%d успешно обновлена", id),
+	})
+}
+
+func (h *Handler) DeleteNoteHandler(w http.ResponseWriter, r *http.Request) {
+
+	vars := mux.Vars(r)
+	idStr, ok := vars["id"]
+	if !ok {
+		http.Error(w, "ID не указан", http.StatusBadRequest)
+		return
+	}
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Неверный формат ID", http.StatusBadRequest)
+		return
+	}
+
+	err = storage.DeleteNote(h.DB, id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "Заметка не найдена", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Ошибка удалении заметки", http.StatusInternalServerError)
+		return
+	}
 }
