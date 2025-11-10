@@ -6,11 +6,24 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 1111
       POSTGRES_DB: notesdb
-    ports:
-      - "5432:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
-      - ./migrations:/migrations
+    ports:
+      - "5432:5432"
+
+  api:
+    build: .
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: 1111
+      DB_NAME: notesdb
+      LISTEN_ADDR: :8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
 
 volumes:
   db-data:
