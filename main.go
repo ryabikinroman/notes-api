@@ -6,16 +6,12 @@ import (
 	"os"
 
 	"github.com/gorilla/mux"
-	"github.com/joho/godotenv"
 
 	"notes-api/internal/handlers"
 	"notes-api/internal/storage"
 )
 
 func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Println("Не удалось загрузить .env — используем системные переменные")
-	}
 
 	db, err := storage.NewDB()
 	if err != nil {
