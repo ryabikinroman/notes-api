@@ -21,7 +21,7 @@ func (h *Handler) GetAllNotesHandler(w http.ResponseWriter, r *http.Request) {
 
 	notes, err := storage.GetAllNotes(h.DB)
 	if err != nil {
-		http.Error(w, "server error", http.StatusInternalServerError)
+		WriteError(w, http.StatusInternalServerError, "Ошибка сервера")
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -39,7 +39,7 @@ func (h *Handler) CreateNoteHandler(w http.ResponseWriter, r *http.Request) {
 
 	id, err := storage.CreateNote(h.DB, &payload)
 	if err != nil {
-		http.Error(w, "ошибка при создании заметки", http.StatusInternalServerError)
+		WriteError(w, http.StatusInternalServerError, "Ошибка сервера")
 		return
 	}
 
@@ -70,7 +70,7 @@ func (h *Handler) GetNoteByIDHandler(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(err.Error(), "не найдена") {
 			http.Error(w, "Запись не найдена", http.StatusNotFound)
 		} else {
-			http.Error(w, "Ошибка сервера", http.StatusInternalServerError)
+			WriteError(w, http.StatusInternalServerError, "Ошибка сервера")
 		}
 		return
 	}
@@ -106,7 +106,7 @@ func (h *Handler) UpdateNoteHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Заметка не найдена", http.StatusNotFound)
 			return
 		}
-		http.Error(w, "Ошибка при обновлении заметки", http.StatusInternalServerError)
+		WriteError(w, http.StatusInternalServerError, "Ошибка сервера")
 		return
 	}
 
@@ -137,7 +137,7 @@ func (h *Handler) DeleteNoteHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Заметка не найдена", http.StatusNotFound)
 			return
 		}
-		http.Error(w, "Ошибка удалении заметки", http.StatusInternalServerError)
+		WriteError(w, http.StatusInternalServerError, "Ошибка сервера")
 		return
 	}
 }
