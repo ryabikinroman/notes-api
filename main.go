@@ -5,13 +5,19 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/gorilla/mux"
-
 	"notes-api/internal/handlers"
 	"notes-api/internal/storage"
+
+	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
+	"github.com/rs/cors"
 )
 
 func main() {
+
+	if err := godotenv.Load(".env"); err != nil {
+		log.Println("Не удалось загрузить .env:", err)
+	}
 
 	db, err := storage.NewDB()
 	if err != nil {
@@ -34,6 +40,15 @@ func main() {
 		addr = ":8080"
 	}
 
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization"},
+		AllowCredentials: true,
+	})
+
+	handler := c.Handler(r)
+
 	log.Printf("Сервер запущен на http://localhost%s", addr)
-	log.Fatal(http.ListenAndServe(addr, r))
+	log.Fatal(http.ListenAndServe(addr, handler))
 }
