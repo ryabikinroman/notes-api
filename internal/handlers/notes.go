@@ -8,7 +8,6 @@ import (
 	"notes-api/internal/models"
 	"notes-api/internal/storage"
 	"strconv"
-	"strings"
 
 	"github.com/gorilla/mux"
 )
@@ -18,22 +17,26 @@ type Handler struct {
 }
 
 func (h *Handler) GetAllNotesHandler(w http.ResponseWriter, r *http.Request) {
-
 	notes, err := storage.GetAllNotes(h.DB)
 	if err != nil {
 		WriteError(w, http.StatusInternalServerError, "Ошибка сервера")
 		return
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(notes)
 }
 
 func (h *Handler) CreateNoteHandler(w http.ResponseWriter, r *http.Request) {
-
 	var payload models.Note
 
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		http.Error(w, "Неверный формат JSON", http.StatusBadRequest)
+		WriteError(w, http.StatusBadRequest, "Неверный формат JSON")
+		return
+	}
+
+	if err := payload.Validate(); err != nil {
+		WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -51,24 +54,15 @@ func (h *Handler) CreateNoteHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetNoteByIDHandler(w http.ResponseWriter, r *http.Request) {
-
-	vars := mux.Vars(r)
-	idStr, ok := vars["id"]
-	if !ok {
-		http.Error(w, "ID не указан", http.StatusBadRequest)
-		return
-	}
-
-	id, err := strconv.Atoi(idStr)
+	id, err := parseID(w, r)
 	if err != nil {
-		http.Error(w, "Неверный формат ID", http.StatusBadRequest)
 		return
 	}
 
 	note, err := storage.GetNoteByID(h.DB, id)
 	if err != nil {
-		if strings.Contains(err.Error(), "не найдена") {
-			http.Error(w, "Запись не найдена", http.StatusNotFound)
+		if err == sql.ErrNoRows {
+			WriteError(w, http.StatusNotFound, "Заметка не найдена")
 		} else {
 			WriteError(w, http.StatusInternalServerError, "Ошибка сервера")
 		}
@@ -80,30 +74,26 @@ func (h *Handler) GetNoteByIDHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) UpdateNoteHandler(w http.ResponseWriter, r *http.Request) {
-
-	vars := mux.Vars(r)
-	idStr, ok := vars["id"]
-	if !ok {
-		http.Error(w, "ID не указан", http.StatusBadRequest)
-		return
-	}
-
-	id, err := strconv.Atoi(idStr)
+	id, err := parseID(w, r)
 	if err != nil {
-		http.Error(w, "Неверный формат ID", http.StatusBadRequest)
 		return
 	}
 
 	var payload models.Note
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		http.Error(w, "Неверный формат JSON", http.StatusBadRequest)
+		WriteError(w, http.StatusBadRequest, "Неверный формат JSON")
+		return
+	}
+
+	if err := payload.Validate(); err != nil {
+		WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	err = storage.UpdateNote(h.DB, id, &payload)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			http.Error(w, "Заметка не найдена", http.StatusNotFound)
+			WriteError(w, http.StatusNotFound, "Заметка не найдена")
 			return
 		}
 		WriteError(w, http.StatusInternalServerError, "Ошибка сервера")
@@ -117,27 +107,36 @@ func (h *Handler) UpdateNoteHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) DeleteNoteHandler(w http.ResponseWriter, r *http.Request) {
-
-	vars := mux.Vars(r)
-	idStr, ok := vars["id"]
-	if !ok {
-		http.Error(w, "ID не указан", http.StatusBadRequest)
-		return
-	}
-
-	id, err := strconv.Atoi(idStr)
+	id, err := parseID(w, r)
 	if err != nil {
-		http.Error(w, "Неверный формат ID", http.StatusBadRequest)
 		return
 	}
 
 	err = storage.DeleteNote(h.DB, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			http.Error(w, "Заметка не найдена", http.StatusNotFound)
+			WriteError(w, http.StatusNotFound, "Заметка не найдена")
 			return
 		}
 		WriteError(w, http.StatusInternalServerError, "Ошибка сервера")
 		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": fmt.Sprintf("Заметка с ID=%d успешно удалена", id),
+	})
+}
+
+func parseID(w http.ResponseWriter, r *http.Request) (int, error) {
+	vars := mux.Vars(r)
+	idStr := vars["id"]
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		WriteError(w, http.StatusBadRequest, "Неверный формат ID")
+		return 0, err
+	}
+
+	return id, nil
 }
