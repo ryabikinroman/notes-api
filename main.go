@@ -31,6 +31,7 @@ func main() {
 
 	r.HandleFunc("/notes", h.GetAllNotesHandler).Methods("GET")
 	r.HandleFunc("/notes", h.CreateNoteHandler).Methods("POST")
+	r.HandleFunc("/auth/login", h.LoginHandler).Methods("POST")
 	r.HandleFunc("/notes/{id}", h.GetNoteByIDHandler).Methods("GET")
 	r.HandleFunc("/notes/{id}", h.UpdateNoteHandler).Methods("PUT")
 	r.HandleFunc("/notes/{id}", h.DeleteNoteHandler).Methods("DELETE")
