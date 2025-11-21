@@ -29,12 +29,15 @@ func main() {
 
 	r := mux.NewRouter()
 
-	r.HandleFunc("/notes", h.GetAllNotesHandler).Methods("GET")
-	r.HandleFunc("/notes", h.CreateNoteHandler).Methods("POST")
 	r.HandleFunc("/auth/login", h.LoginHandler).Methods("POST")
-	r.HandleFunc("/notes/{id}", h.GetNoteByIDHandler).Methods("GET")
-	r.HandleFunc("/notes/{id}", h.UpdateNoteHandler).Methods("PUT")
-	r.HandleFunc("/notes/{id}", h.DeleteNoteHandler).Methods("DELETE")
+
+	notes := r.PathPrefix("/notes").Subrouter()
+	notes.Use(handlers.JWTAuthMiddleware)
+	notes.HandleFunc("", h.GetAllNotesHandler).Methods("GET")
+	notes.HandleFunc("", h.CreateNoteHandler).Methods("POST")
+	notes.HandleFunc("/{id}", h.GetNoteByIDHandler).Methods("GET")
+	notes.HandleFunc("/{id}", h.UpdateNoteHandler).Methods("PUT")
+	notes.HandleFunc("/{id}", h.DeleteNoteHandler).Methods("DELETE")
 
 	addr := os.Getenv("LISTEN_ADDR")
 	if addr == "" {

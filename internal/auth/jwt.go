@@ -17,15 +17,21 @@ func GenerateToken(userID int) (string, error) {
 		}
 	}
 
-	claims := jwt.MapClaims{
-		"user_id": userID,
-		"exp":     time.Now().Add(time.Hour * time.Duration(expHours)).Unix(),
+	claims := &Claims{
+		UserID: userID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(
+				time.Now().Add(time.Hour * time.Duration(expHours)),
+			),
+		},
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodES256, claims)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
 	secret := []byte(os.Getenv("JWT_SECRET"))
 	if len(secret) == 0 {
-		return "", fmt.Errorf("jwt не найден")
+		return "", fmt.Errorf("JWT_SECRET не найден")
 	}
+
 	return token.SignedString(secret)
 }
